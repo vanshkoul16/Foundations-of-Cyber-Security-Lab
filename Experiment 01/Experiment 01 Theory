@@ -1,0 +1,27 @@
+
+Experiment 1: Information Gathering Using Google (Google Dorking)
+
+1. Theory
+Google Dorking (also known as Google Hacking) is a passive reconnaissance technique that utilizes advanced search operators to query and filter Google's index databases. It enables security researchers and ethical hackers to identify exposed configuration files, unprotected administrative panels, database dumps, and sensitive credentials without transmitting active network packets directly to the target host.
+
+2. Advanced Search Operators
+- site:     Restricts search results strictly to a specified domain or TLD (e.g., site:example.com).
+- filetype: Filters results by a specific file extension (e.g., filetype:pdf).
+- ext:      Synonym for filetype; filters results by file extension (e.g., ext:env).
+- inurl:    Restricts results to pages containing the specified term within the URL path (e.g., inurl:admin/login.php).
+- intitle:  Matches terms contained inside the HTML <title> tag of a web page (e.g., intitle:"index of /").
+- intext:   Searches for specified keywords appearing anywhere in the main body text of the page (e.g., intext:"password").
+
+3. Practical Input Queries (Google Dorks)
+
+A. Locate Publicly Exposed Directory Listings:
+site:example.com intitle:"index of /" "parent directory"
+
+B. Find Exposed Sensitive Environment and Configuration Files:
+site:example.com ext:env OR ext:yml OR ext:conf "DB_PASSWORD"
+
+C. Discover Administrative and Login Portals:
+site:example.com inurl:login OR inurl:admin intitle:"Admin Login"
+
+D. Search for Exposed SQL Backups and Schema Dumps:
+site:example.com ext:sql OR ext:dump "CREATE TABLE"
