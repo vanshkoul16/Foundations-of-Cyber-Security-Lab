@@ -1,0 +1,87 @@
+EXPERIMENT 5 : BRUTE FORCE AND DICTIONARY ATTACKS
+
+1. AIM / OBJECTIVE
+To understand the theoretical mechanics of Brute Force and Dictionary attacks, evaluate authentication vulnerabilities on a controlled test server using password auditing concepts, and analyze effective defensive countermeasures against automated credential-guessing attacks.
+
+
+2. THEORY
+
+Authentication is the primary defense mechanism for network services (such as SSH, FTP, HTTP, and SMB). When systems rely on weak, predictable, or default credentials, their authentication layers become vulnerable to automated password-auditing attacks. These attacks are primarily categorized into Dictionary Attacks and Brute Force Attacks.
+
+A. Dictionary Attacks
+A Dictionary Attack is a targeted technique that attempts to authenticate by systematically testing a pre-compiled list of likely passwords, known as a wordlist.
+- Mechanism: Rather than guessing random characters, this method leverages human psychology. Users frequently choose memorable words, common phrases, keyboard patterns (e.g., qwerty123), or passwords exposed in previous data breaches.
+- Hybrid Variations: Advanced dictionary attacks apply rule-based modifications, such as appending numbers, years, or special characters, or substituting letters with symbols (e.g., converting "password" to "P@ssw0rd").
+- Efficiency: Dictionary attacks operate with high speed and low computational overhead because the search space is strictly limited to plausible human-chosen passwords.
+
+B. Brute Force Attacks
+A Brute Force Attack is an exhaustive trial-and-error method that systematically generates and tests every possible combination of characters within a defined character set (keyspace) and length range until the correct credential is discovered.
+- Mechanism: If a system uses a 4-digit numeric PIN (digits 0-9), a brute force process sequentially tests every combination from 0000, 0001, and 0002 up to 9999.
+- Mathematical Complexity (Keyspace and Entropy):
+  The total number of possible combinations (N) for a fixed-length password is calculated as the size of the character set (C) raised to the power of the password length (L):
+  
+  N = C^L
+  
+  The cryptographic strength of a password against brute-force guessing is measured in bits of entropy (E):
+  
+  E = L * log2(C)
+  
+  For example, an 8-character lowercase password (C = 26, L = 8) produces 26^8 (approximately 2.08 x 10^11) combinations, or about 37.6 bits of entropy. Expanding the character set to include uppercase letters, digits, and symbols (C = 94, L = 8) increases the keyspace to 94^8 (approximately 6.09 x 10^15) combinations, or about 52.4 bits of entropy.
+
+
+3. COMPARISON: DICTIONARY ATTACK VS. BRUTE FORCE ATTACK
+
+- Core Mechanism:
+  * Dictionary Attack: Tests pre-compiled wordlists of common or leaked passwords.
+  * Brute Force Attack: Exhaustively generates all possible character combinations.
+
+- Search Space:
+  * Dictionary Attack: Limited to the total number of entries in the wordlist.
+  * Brute Force Attack: Exponentially large based on character pool and length (C^L).
+
+- Time Complexity:
+  * Dictionary Attack: Fast; linear complexity O(W), where W is the wordlist size.
+  * Brute Force Attack: Slow; exponential complexity O(C^L).
+
+- Success Rate:
+  * Dictionary Attack: High against predictable, human-chosen passwords; fails against random strings.
+  * Brute Force Attack: Theoretically 100% guaranteed, provided sufficient time and no lockouts.
+
+- Primary Limitation:
+  * Dictionary Attack: Ineffective if the target password is not present in the wordlist.
+  * Brute Force Attack: Computationally infeasible against long, high-entropy passwords or rate-limited servers.
+
+
+4. TOOL OVERVIEW: THC-HYDRA
+
+THC-Hydra is a parallelized, network-based authentication auditing tool used by security administrators and penetration testers to evaluate the strength of remote login services.
+
+- Online Auditing Architecture: Unlike offline password recovery tools (such as Hashcat or John the Ripper) that compute cryptographic hashes locally using CPU/GPU resources, Hydra performs online testing by sending live authentication requests over the network to a target service.
+- Parallelization: It accelerates testing by opening multiple concurrent network connections (referred to as tasks or threads), enabling simultaneous credential verification across supported protocols.
+- Supported Protocols: Capable of auditing numerous network protocols, including SSH, FTP, HTTP/HTTPS, SMB, RDP, MySQL, Telnet, and VNC.
+- Operational Modes: Supports both wordlist-driven auditing (reading usernames and passwords from text files) and automated character-generation auditing (iterating through specified character sets and length boundaries).
+
+
+5. PASSWORD VULNERABILITIES AND DEFENSIVE COUNTERMEASURES
+
+Auditing authentication services in a controlled lab environment highlights common security weaknesses and demonstrates the necessity of layered defenses:
+
+1. Vulnerability: Absence of Rate Limiting and Account Lockout
+   - Observation: Without connection throttling, an authentication service processes hundreds of login attempts per minute across concurrent network threads.
+   - Countermeasure: Implement Account Lockout Policies (e.g., temporarily locking an account for 15 minutes after 5 consecutive failed attempts) and deploy host-based intrusion prevention tools such as Fail2Ban to dynamically block IP addresses exhibiting rapid authentication failures.
+
+2. Vulnerability: Weak and Default Credentials
+   - Observation: Services left with default credentials (e.g., admin/admin) or simple dictionary words are compromised rapidly during basic wordlist audits.
+   - Countermeasure: Enforce strict password policies requiring a minimum length of 12 to 16 characters, screen passwords against known breach databases, and disable or rename default administrative accounts.
+
+3. Vulnerability: Reliance on Single-Factor Authentication
+   - Observation: When a service relies solely on a static username and password, guessing or discovering the password grants immediate unauthorized access.
+   - Countermeasure: Enforce Multi-Factor Authentication (MFA) and replace password-based network logins with cryptographic authentication, such as disabling password authentication in SSH in favor of SSH Public/Private Key pairs.
+
+4. Vulnerability: Lack of Progressive Delays (Tarpitting)
+   - Observation: Instantaneous server responses allow automated tools to maximize request throughput before detection.
+   - Countermeasure: Configure progressive authentication delays (exponential backoff) after failed login attempts to make automated network-based guessing impractically slow.
+
+
+6. CONCLUSION
+Through theoretical analysis of keyspace, entropy, and network authentication mechanisms, it is evident that dictionary attacks exploit human predictability while brute force attacks test mathematical complexity. Because online auditing tools are constrained by network latency and server response rates, combining high-entropy passwords with account lockouts, rate limiting, and Multi-Factor Authentication effectively neutralizes automated password attacks.
