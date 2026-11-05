@@ -1,0 +1,128 @@
+
+Experiment 4: Buffer Overflow Exploit in C
+Theory
+A stack-based buffer overflow occurs when a program copies more data into a fixed-size buffer than it can hold without validating the input bounds.
+
+In the x86/x64 calling convention, local variables are generally stored on the stack near the saved frame pointer (RBP/EBP) and the saved return address (RIP/EIP). Writing beyond the allocated buffer may overwrite nearby stack data, including the stored return address.
+
+When the function returns, the processor normally uses the stored return address to continue execution in the calling function. If this address is overwritten, program execution may crash or be redirected.
+
+Stack Layout
+Low Memory Addresses
+
+Plaintext
++-----------------------------+
+| char buffer[64]             |  <-- Buffer Start
++-----------------------------+
+| Saved Frame Pointer (EBP)   |  <-- 4 / 8 bytes
++-----------------------------+
+| Saved Return Address (EIP)  |  <-- Possible overwrite target
++-----------------------------+
+High Memory Addresses
+
+Vulnerable Source Code (vuln.c)
+C
+#include <stdio.h>
+#include <string.h>
+
+void secret_function()
+{
+    printf("[+] Vulnerability Exploited! Target reached.\n");
+}
+
+void vulnerable_function()
+{
+    char buffer[64];
+
+    printf("Enter input string: ");
+
+    // gets() does not perform boundary checking
+    gets(buffer);
+
+    printf("You entered: %s\n", buffer);
+}
+
+int main()
+{
+    printf("[*] Starting program...\n");
+
+    vulnerable_function();
+
+    printf("[-] Program exited normally.\n");
+
+    return 0;
+}
+Compilation and Demonstration
+To study the behavior of a buffer overflow in a controlled laboratory environment, the program can be compiled with specific compiler protections disabled.
+
+Compile in 32-bit x86 Mode
+Bash
+gcc -m32 -fno-stack-protector -z execstack -no-pie vuln.c -o vuln
+Meaning of Options
+-m32: Compiles the program as a 32-bit executable.
+
+-fno-stack-protector: Disables stack canaries.
+
+-z execstack: Marks the stack as executable.
+
+-no-pie: Disables Position Independent Executable (PIE), making program addresses more predictable.
+
+Generate an Overflowing Input
+An input larger than the 64-byte buffer can demonstrate the overflow:
+
+Bash
+python3 -c "print('A' * 100)" | ./vuln
+The program may terminate with an error such as:
+
+Plaintext
+Segmentation fault (core dumped)
+This occurs because data has been written beyond the allocated buffer and may have corrupted important stack information.
+
+Examining the Program Using GDB
+Start the program using GDB:
+
+Bash
+gdb ./vuln
+Inside GDB, the address of secret_function() can be inspected using:
+
+Code snippet
+(gdb) print secret_function
+Example output:
+
+Plaintext
+$1 = {void ()} 0x08049182
+Note: The exact address may differ depending on the compiler, operating system, architecture, and binary configuration.
+
+In a controlled laboratory demonstration, the stack layout and offset can then be studied to understand how overwriting data beyond the buffer affects the saved return address.
+
+Mitigation Strategies
+1. Safe Library Functions
+Avoid unsafe functions such as:
+
+gets()
+
+strcpy()
+
+sprintf()
+
+Use bounded alternatives such as:
+
+fgets()
+
+strncpy()
+
+snprintf()
+
+Example:
+
+C
+fgets(buffer, sizeof(buffer), stdin);
+fgets() restricts the amount of data written into the buffer and helps prevent writing beyond its allocated size.
+
+2. Stack Canaries
+Modern compilers can insert a special random value called a stack canary between local buffers and important stack information. Before a function returns, the program checks whether the canary value has changed.
+
+If the value has been modified, the program terminates with an error such as:
+
+Plaintext
+*** stack 
