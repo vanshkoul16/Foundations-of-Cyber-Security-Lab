@@ -1,0 +1,39 @@
+
+Experiment 2: Port Scanning and Information Gathering with Nmap
+
+1. Theory
+Port scanning is an active reconnaissance method used to discover live hosts, open/closed ports, running network services, and underlying operating systems:
+- TCP SYN Scan (-sS): Also known as a "Half-Open" scan. The scanner sends a SYN packet. If the target responds with SYN/ACK, the port is open (Nmap immediately sends a RST packet to tear down the connection before completion). If it returns RST/ACK, the port is closed.
+- TCP Connect Scan (-sT): Completes the full three-way handshake (SYN -> SYN/ACK -> ACK). Used when raw socket privileges are unavailable (such as by non-root users).
+- UDP Scan (-sU): Sends raw UDP packets to target ports. If an ICMP Type 3 Code 3 (Port Unreachable) error is returned, the port is closed. If an application responds or no response is received, it is categorized as open|filtered.
+
+2. Installation Commands
+
+Ubuntu / Debian / Kali Linux:
+sudo apt update && sudo apt install nmap -y
+
+Fedora / RHEL:
+sudo dnf install nmap -y
+
+macOS (Homebrew):
+brew install nmap
+
+Windows:
+Download and run the binary installer from https://nmap.org/download.html
+
+3. Practical Commands and Execution
+
+A. Host Discovery (Ping Sweep across a subnet):
+sudo nmap -sn 192.168.1.0/24
+
+B. Stealth TCP SYN Scan on Specific Ports:
+sudo nmap -sS -p 21,22,80,443,3306 192.168.1.50
+
+C. UDP Port Scan:
+sudo nmap -sU -p 53,67,123,161 192.168.1.50
+
+D. Service Version & OS Fingerprinting:
+sudo nmap -sV -O --traceroute 192.168.1.50
+
+E. Comprehensive Aggressive Scan:
+sudo nmap -A -T4 192.168.1.50
