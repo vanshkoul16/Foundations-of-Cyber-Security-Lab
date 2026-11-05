@@ -1,0 +1,117 @@
+AIM
+To set up and configure Snort as a Network Intrusion Detection System (NIDS), create custom detection rules, and analyze generated security alerts.
+
+OBJECTIVE
+- Understand the fundamentals of Intrusion Detection Systems (IDS) and their types.
+- Explore the architecture and operational modes of the Snort IDS tool.
+- Learn the syntax and structure of Snort rules for signature-based detection.
+- Configure Snort in NIDS mode, write custom rules to detect specific network traffic (such as ICMP pings and TCP SYN scans), and analyze the resulting alert logs.
+
+INTRODUCTION TO INTRUSION DETECTION SYSTEMS (IDS)
+An Intrusion Detection System (IDS) is a security mechanism that monitors network traffic or system activities for malicious actions, unauthorized access, or policy violations. Unlike a firewall, which actively blocks traffic based on static rules, an IDS primarily acts as a passive monitoring and alerting system (unless configured as an Intrusion Prevention System, or IPS).
+
+CLASSIFICATION OF IDS BY DEPLOYMENT
+- Network Intrusion Detection System (NIDS): Deployed at strategic points within a network (such as a subnet gateway or switch mirror port) to inspect passing packets across all devices on that segment.
+- Host Intrusion Detection System (HIDS): Installed on an individual endpoint or server to monitor system calls, application logs, file-system modifications, and local network interfaces.
+
+CLASSIFICATION OF IDS BY DETECTION METHODOLOGY
+- Signature-Based Detection (Misuse Detection): Compares incoming network packets against a database of known attack patterns or "signatures" (byte sequences, header flags, or specific payloads). It offers low false-positive rates for known threats but cannot detect zero-day attacks.
+- Anomaly-Based Detection: Establishes a baseline of normal network behavior (bandwidth usage, protocols, ports, and device connections) and triggers alerts when statistical deviations occur. It can detect novel attacks but often produces higher false-positive rates.
+
+INTRODUCTION TO SNORT
+Snort is a widely used, open-source Network Intrusion Detection and Prevention System (NIDS/NIPS) originally developed by Martin Roesch in 1998 and now maintained by Cisco. It uses the libpcap library to capture packets in real time and performs protocol analysis, content searching, and content matching. Snort can detect a wide variety of attacks and probes, including buffer overflows, stealth port scans, CGI attacks, SMB probes, and OS fingerprinting attempts.
+
+OPERATIONAL MODES OF SNORT
+1. Sniffer Mode: Reads packets directly from the network interface and displays them in a continuous stream on the console.
+2. Packet Logger Mode: Logs captured packets directly to disk files (usually in pcap format) for offline forensic analysis using tools like Wireshark or tcpdump.
+3. Network Intrusion Detection System (NIDS) Mode: The most complex and configurable mode, where Snort analyzes network traffic against a user-defined rule set and performs specific actions (such as generating alerts or logging packets) based on what it detects.
+
+SNORT ARCHITECTURE
+Snort processes network traffic through five main components working in a sequential pipeline:
+1. Packet Decoder: Captures raw packets from the network interface using libpcap and decodes data link (Ethernet), network (IP), and transport (TCP/UDP/ICMP) layer headers into internal data structures.
+2. Preprocessors (Plugins): Inspect and manipulate packets before they reach the detection engine. They handle packet defragmentation (IP), stateful TCP stream reassembly, protocol normalization (decoding HTTP URLs or obfuscated payloads), and anomaly detection (such as port scan detection).
+3. Detection Engine: The core component of Snort. It tests the decoded and normalized packets against loaded Snort rules in a sequential decision tree. If a packet matches all conditions in a rule, the corresponding rule action is triggered.
+4. Logging and Alerting System: Records information about matched packets based on the action specified in the rule. Alerts can be written to plain text files (alert), syslog, UNIX sockets, or unified binary formats (unified2).
+5. Output Modules: Process the logged data or alerts and send them to external destinations, such as relational databases (MySQL, PostgreSQL), SIEM platforms, or web-based monitoring consoles.
+
+SNORT RULE STRUCTURE AND SYNTAX
+A Snort rule is divided into two logical sections: the Rule Header and the Rule Options.
+
+Syntax:
+[Action] [Protocol] [Source IP] [Source Port] [Direction] [Destination IP] [Destination Port] ( [Rule Options] )
+
+1. Rule Header Components
+- Action: Defines what Snort does when a packet matches the rule criteria. Common actions include:
+  * alert: Generate an alert using the selected alert method, and then log the packet.
+  * log: Log the packet without generating an alert.
+  * pass: Ignore the packet.
+  * drop: Block and log the packet (when running in inline IPS mode).
+- Protocol: Specifies the protocol to inspect (tcp, udp, icmp, or ip).
+- Source / Destination IP: Specifies IP addresses or CIDR blocks, variables like $HOME_NET or $EXTERNAL_NET, or the keyword any.
+- Source / Destination Port: Specifies single ports (80), port ranges (1024:2048), negation (!80), or the keyword any.
+- Direction Operator: Indicates the orientation of the traffic:
+  * -> : Unidirectional (from source to destination).
+  * <> : Bidirectional (traffic flowing in either direction between the two endpoints).
+
+2. Rule Options Components
+Rule options are enclosed in parentheses () and separated by semicolons ;. Each option consists of a keyword followed by a colon : and its argument.
+- msg: Specifies the human-readable alert message printed in the logs (e.g., msg:"ICMP Ping Detected";).
+- sid: Snort ID, a unique numerical identifier for the rule. Numbers below 1,000,000 are reserved for official rules; custom local rules must use 1,000,000 or higher (e.g., sid:1000001;).
+- rev: Revision number of the rule, used for version tracking alongside the sid (e.g., rev:1;).
+- content: Searches the packet payload for a specific string or raw bytecode in hexadecimal (e.g., content:"|90 90 90|"; or content:"admin";).
+- flags: Checks for specific TCP control flags, such as S (SYN), A (ACK), F (FIN), R (RST), P (PSH), or U (URG).
+- itype / icode: Checks for specific ICMP type and code numbers (e.g., itype:8; for Echo Request).
+- classtype: Categorizes the attack type and assigns a default priority level.
+
+KEY CONFIGURATION FILES AND DIRECTORIES
+- /etc/snort/snort.conf: The primary configuration file defining network variables ($HOME_NET, $EXTERNAL_NET), preprocessor settings, output plugins, and included rule files.
+- /etc/snort/rules/local.rules: The dedicated file where administrators write custom, site-specific detection rules.
+- /var/log/snort/: The default directory where Snort stores alert files (alert or snort.alert.fast) and binary packet captures.
+
+PRACTICAL PROCEDURE / IMPLEMENTATION STEPS
+
+Step 1: Install Snort
+Update package repositories and install Snort on the Linux environment:
+sudo apt update
+sudo apt install snort -y
+
+Step 2: Configure Network Variables
+Open /etc/snort/snort.conf in a text editor and verify that $HOME_NET is set to your local network subnet and that local.rules is included:
+ipvar HOME_NET 192.168.1.0/24
+ipvar EXTERNAL_NET any
+include $RULE_PATH/local.rules
+
+Step 3: Create Custom Rules
+Open /etc/snort/rules/local.rules and add the following custom rules to detect ICMP pings, TCP SYN scans, and FTP connection attempts:
+
+# Rule 1: Detect ICMP Echo Request (Ping)
+alert icmp any any -> $HOME_NET any (msg:"ICMP Ping Detected"; itype:8; sid:1000001; rev:1;)
+
+# Rule 2: Detect TCP SYN Scan / Connection Attempt on Port 80
+alert tcp any any -> $HOME_NET 80 (msg:"HTTP TCP SYN Packet Detected"; flags:S; sid:1000002; rev:1;)
+
+# Rule 3: Detect FTP Access Attempt on Port 21
+alert tcp any any -> $HOME_NET 21 (msg:"FTP Connection Attempt Detected"; flags:S; sid:1000003; rev:1;)
+
+Step 4: Validate Configuration
+Test the Snort configuration file for syntax errors before running the service:
+sudo snort -T -c /etc/snort/snort.conf -i eth0
+
+Step 5: Run Snort in NIDS Mode and Analyze Alerts
+Start Snort in NIDS mode, sending fast alerts directly to the console (-A console) and suppressing packet payload dumps (-q):
+sudo snort -A console -q -c /etc/snort/snort.conf -i eth0
+
+SAMPLE ALERT OUTPUT AND ANALYSIS
+When an external host (192.168.1.50) pings the monitored host (192.168.1.10), Snort generates the following alert output:
+
+11/05-13:20:15.482910  [**] [1:1000001:1] ICMP Ping Detected [**] [Priority: 0] {ICMP} 192.168.1.50 -> 192.168.1.10
+
+Alert Breakdown:
+- 11/05-13:20:15.482910: Timestamp of the detected event.
+- [1:1000001:1]: Generator ID (1), Snort Rule ID (1000001), and Rule Revision (1).
+- ICMP Ping Detected: Alert message defined in the rule's msg option.
+- {ICMP}: Protocol of the triggering packet.
+- 192.168.1.50 -> 192.168.1.10: Source IP address and Destination IP address (ports are included for TCP/UDP traffic, e.g., 192.168.1.50:54321 -> 192.168.1.10:80).
+
+RESULT / CONCLUSION
+Snort was configured as a Network Intrusion Detection System (NIDS). Custom signature rules were written in local.rules to monitor ICMP and TCP traffic, and live network alerts were generated and analyzed to identify the source, destination, protocol, and nature of the simulated network probes.
